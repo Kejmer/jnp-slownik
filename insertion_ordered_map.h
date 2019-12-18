@@ -127,6 +127,11 @@ public:
 		return this->size;
 	}
 	
+	bool empty() const
+	{
+		return this->size == 0;
+	}
+	
 	void clear()
 	{
 		
