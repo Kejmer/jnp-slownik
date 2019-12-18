@@ -1,3 +1,8 @@
+#include <iostream>
+#include <unordered_map>
+
+using namespace std;
+
 
 /* TODO LIST
 Konstruktor bezparametrowy O(1)
@@ -30,3 +35,35 @@ Jeśli to możliwe sama operacja wstawiania będzie nieudostępnianą operacją
 wykorzystywaną przez Wstawianie i Scalanie, aby tuż przed odpaleniem sprawdzać
 czy należy kopiować tylko raz.
 */
+
+/* klamrowanie
+funkcja() 
+{
+	
+}
+
+klasa 
+{
+	
+}
+
+if () {
+	
+}
+
+for () {
+	
+}
+etc
+*/
+
+class lookup_error : exception
+{
+	
+};
+
+template <class K, class V, class Hash = std::hash<K>>
+class insertion_ordered_map 
+{
+	
+};
