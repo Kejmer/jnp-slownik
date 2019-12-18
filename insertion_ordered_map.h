@@ -95,8 +95,10 @@ private:
 		
 	}
 	
-	//może też specjalna klasa opakowująca mapę?
-	// zawiera metodę begin(), end() dla iteratorów
+	//może też specjalna klasa opakowująca mapę lub dziedzicząca?
+	// zawiera metody pomocnicze begin(), end() dla iteratorów
+	// definiowanie takich operacji, wskaźników insertion_ordered_map
+	// może być uciążliwe przy kopiowaniu
 		
 		
 public:
