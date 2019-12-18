@@ -1,3 +1,6 @@
+#ifndef JNP_INSERTION_ORDERED_MAP
+#define JNP_INSERTION_ORDERED_MAP
+
 #include <iostream>
 #include <unordered_map>
 
@@ -14,8 +17,8 @@ Usuwanie ze słownika O(1) // smart pointer check
 Scalanie słowników O(n+m) // iterowanie się po drugim i wstawianie?
 Referencja wartości O(1) // smart pointer check
 Operator indeksowania O(1)
-Rozmiar słownika O(1)
-Sprawdzanie niepustości O(1)
+Rozmiar słownika O(1) – DONE
+Sprawdzanie niepustości O(1) – DONE
 Czyszczenie słownika O(n) // a nie da się w O(1)?
 Sprawdzanie instnienia klucza O(1)
 Klasa iteratora: O(1)
@@ -34,6 +37,7 @@ Klasa insertion_ordered_map przeźroczysta na wyjątki
 Jeśli to możliwe sama operacja wstawiania będzie nieudostępnianą operacją
 wykorzystywaną przez Wstawianie i Scalanie, aby tuż przed odpaleniem sprawdzać
 czy należy kopiować tylko raz.
+
 */
 
 /* klamrowanie – szybka informacja, do usunięcia
@@ -67,11 +71,35 @@ class insertion_ordered_map
 {
 private:
 	//tutaj ta funkcja do dodawania
-		
-public:
-	
 	size_t size;
 	
+	class node 
+	{
+	public:
+		node *next = NULL;
+		node *previous;
+		V value;
+		
+		node(V value)
+		{
+			this->value = value;
+			this->previous = NULL; //może wskazywał na siebie?
+		}
+		
+		node(V value, node *previous) //dodawany na końcu
+		{
+			this->value = value;
+			this->previous = previous;
+			previous->next = this;
+		}
+		
+	}
+	
+	//może też specjalna klasa opakowująca mapę?
+	// zawiera metodę begin(), end() dla iteratorów
+		
+		
+public:
 	insertion_ordered_map() 
 	{
 		
@@ -148,3 +176,6 @@ public:
 	};
 	
 };
+
+
+#endif //JNP_INSERTION_ORDERED_MAP
