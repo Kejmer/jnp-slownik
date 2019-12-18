@@ -36,7 +36,7 @@ wykorzystywaną przez Wstawianie i Scalanie, aby tuż przed odpaleniem sprawdza�
 czy należy kopiować tylko raz.
 */
 
-/* klamrowanie
+/* klamrowanie – szybka informacja, do usunięcia
 funkcja() 
 {
 	
@@ -65,5 +65,81 @@ class lookup_error : exception
 template <class K, class V, class Hash = std::hash<K>>
 class insertion_ordered_map 
 {
+private:
+	//tutaj ta funkcja do dodawania
+		
+public:
+	
+	size_t size;
+	
+	insertion_ordered_map() 
+	{
+		
+	}
+	
+	insertion_ordered_map(insertion_ordered_map const &other) 
+	{
+		
+	}
+	
+	insertion_ordered_map(insertion_ordered_map &&other) 
+	{
+		
+	}
+	
+	insertion_ordered_map &operator=(insertion_ordered_map other) 
+	{
+		
+	}
+	
+	bool insert(K const &k, V const &v) 
+	{
+		return true;
+	}
+	
+	void erase(K const &k) 
+	{
+		
+	}
+	
+	void merge(insertion_ordered_map &other)
+	{
+		
+	}
+	
+	V &at(K const &k)
+	{
+		return V();
+	}
+	
+	V const &at(K const &k) const 
+	{
+		return V();
+	}
+	
+	V &operator[](K const &k)
+	{
+		return V();
+	}
+	
+	size_t size() const 
+	{
+		return this->size;
+	}
+	
+	void clear()
+	{
+		
+	}
+	
+	bool contains(K const &k) const 
+	{
+		return true;
+	}
+	
+	class iterator 
+	{
+		
+	};
 	
 };
