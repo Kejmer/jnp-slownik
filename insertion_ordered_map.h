@@ -13,9 +13,9 @@ Konstruktor bezparametrowy O(1) – DONE
 Konstruktor kopiujący O(1) O(n) copy-on-write
 Konstruktor przenoszący O(1)
 Operator przypisania O(1)
-Wstawianie do słownika O(1) // smart pointer check
-Usuwanie ze słownika O(1) // smart pointer check
-Scalanie słowników O(n+m) // iterowanie się po drugim i wstawianie?
+Wstawianie do słownika O(1) – DONE
+Usuwanie ze słownika O(1) – DONE
+Scalanie słowników O(n+m) – prawie DONE
 Referencja wartości O(1) // smart pointer check
 Operator indeksowania O(1)
 Rozmiar słownika O(1) – DONE
@@ -78,6 +78,7 @@ private:
 		node *previous;
 		bool is_last = false; //dla true powinno zwrócić exception przy dereferencji
 		V value;
+		K key;
 		
 		node() noexcept
 		{
@@ -85,21 +86,23 @@ private:
 			this->previous = this;
 		}
 		
-		node(V value, node *end) noexcept //konstruktor elementu poczatkowego, wskazuje sam na siebie
+		node(K key, V value, node *end) noexcept //konstruktor elementu poczatkowego, wskazuje sam na siebie
 		{
 			this->value = value;
 			this->next = end;
 			this->previous = this;
 			end->previous = this;
+			this->key = key;
 		}
 		
-		node(V value, node *previous, node *end) noexcept //dodawany na końcu
+		node(K key, V value, node *previous, node *end) noexcept //dodawany na końcu
 		{
 			this->value = value;
 			this->previous = previous;
 			this->next = end;
 			previous->next = this;
 			next->previous = this;
+			this->key = key;
 		}
 		
 	}
@@ -112,7 +115,8 @@ private:
 		node *begin;
 		node *end; //specjalny node który zwraca błąd po dereferencji – do zrobienia
 		
-		node *last() {
+		node *last() 
+		{
 			return end->previous();
 		}
 		
@@ -123,26 +127,29 @@ private:
 			size = 0;
 		}
 		
-		bool insert(K const &k, V const &v) {
+		bool insert(K const &k, V const &v) 
+		{
 			if (begin == end) {
-				begin = new node(v, end);
+				begin = new node(k, v, end);
 				_memory[k] = begin;
 			} else {
 				if (_memory.count(k)) { //czasem będziemy robić bezpośrednie inserty (może) przy scalaniu słownika
 					return false;
 				} else {
-					_memory[K] = new node(v, last(), end);
+					_memory[K] = new node(k, v, last(), end);
 				}
 			}
 			size++;
 			return true;
 		}
 		
-		bool contains(K const &k) {
+		bool contains(K const &k) 
+		{
 			return _memory.count(k) != 0;
 		}
 		
-		bool remove(K const &k) {
+		bool remove(K const &k) 
+		{
 			auto search = _memory.find(k);
 			k->previous->next = k->next;
 			k->next->previous = k->previous;
@@ -150,11 +157,28 @@ private:
 			_memory.remove(search);
 		}
 		
-		V &at(K const &k) {
+		V &at(K const &k)
+		{
 			return _memory.find(k)->value; //niedokońca tak chyba
 		}
+		
+		void clean() {
+			node *temp;
+			while (begin != end) {
+				temp = begin;
+				begin = begin->next;
+				delete temp;
+			}
+			delete end;
+		}
+		
+		~container()
+		{
+			clean();
+			//mapa się chyba sama usuwa?
+		}
 	}
-	shared_ptr<container> _memory_ptr;
+	shared_ptr<container> memory_ptr;
 	
 	//tutaj ta funkcja do dodawania – do zrobienia
 	void has_to_copy() {
@@ -167,7 +191,7 @@ public:
 	
 	insertion_ordered_map() noexcept
 	{
-		memory_ptr = new shared_ptr<container>(new container());
+		memory_ptr = shared_ptr<container>(new container());
 	}
 	
 	insertion_ordered_map(insertion_ordered_map const &other) 
@@ -182,7 +206,7 @@ public:
 	
 	~insertion_ordered_map()
 	{
-		// To jest tricky. Jeśli patrzy na wspólny element z kimś innym to wystarczy że przestanie patrzeć na niego 
+		memory_ptr.reset();
 	}
 	
 	insertion_ordered_map &operator=(insertion_ordered_map other) 
@@ -190,7 +214,7 @@ public:
 		
 	}
 	
-	bool insert(K const &k, V const &v) 
+	bool insert(K const &k, V const &v) noexcept
 	{
 		if (this->contains(k)) return false;
 		has_to_copy();
@@ -201,22 +225,28 @@ public:
 	{
 		if (!this->contains(k)) throw lookup_error();
 		has_to_copy();
-		_memory_ptr->remove(k);
+		memory_ptr->remove(k);
 	}
 	
 	void merge(insertion_ordered_map &other)
 	{
-		
+		has_to_copy(); // unless kopiuje siebie w siebie, wtedy nic się nie zmieni
+		iterator it = other.begin();
+		iterator fin = other.end()
+		while (it != fin) {
+			memory_ptr->insert(it.n->key, it.n->value);
+			++it;
+		}
 	}
 	
 	V &at(K const &k) //brakuje tej obsłúgi pamięci dzielonej
 	{
-		return _memory->at(k);
+		return this->memory_ptr->at(k);
 	}
 	
-	V const &at(K const &k) const 
+	V const &at(K const &k) const //tutaj nie potrzeba obsługi pamięci 
 	{
-		return V();
+		return this->memory_ptr->at(k);
 	}
 	
 	V &operator[](K const &k)
@@ -226,35 +256,35 @@ public:
 	
 	size_t size() const 
 	{
-		return this->_memory_ptr->size;
+		return this->memory_ptr->size;
 	}
 	
 	bool empty() const
 	{
-		return size() == 0;
+		return this->size() == 0;
 	}
 	
-	void clear()
+	void clear() //po prostu przestajemy patrzeć 
 	{
-		
+		this->memory_ptr.reset(new container());
 	}
 	
 	bool contains(K const &k) const 
 	{
-		this->_memory_ptr->contains(k);
+		this->memory_ptr->contains(k);
 	}
 	
 	
 private:
 	
-	iterator create_iterator(node *n) //powinien patrzeć na node a nie wartość, tylko nie powinien
+	iterator create_iterator(node *n) 
 	{
 		
 	}
 	
 public:
 	
-	class iterator //typename?
+	class iterator 
 	{
 	insertion_ordered_map &operator=(insertion_ordered_map other) 
 	private:
@@ -268,7 +298,7 @@ public:
 		
 		bool operator==(iterator &other)
 		{
-			return other.n == this->n // nie jestem pewien czy mogę odwołać się do other->n ;friend jakiś może?
+			return other.n == this->n 
 		}
 		
 		bool operator!=(iterator &other)
@@ -279,6 +309,8 @@ public:
 		V operator*() {
 			return n->value;
 		}
+		
+		friend class insertion_ordered_map;
 	};
 	
 	//czy begin i end w środku czy na końcu?
@@ -286,12 +318,12 @@ public:
 	
 	iterator begin() 
 	{
-		return create_iterator(this->_memory_ptr->begin);
+		return create_iterator(this->memory_ptr->begin); //przerobić obie funkcje aby nie tworzyły za każdym razem tylko ref zwracały – pamiętać o copy on write
 	}
 	
 	iterator end() 
 	{
-		return create_iterator(this->_memory_ptr->end);
+		return create_iterator(this->memory_ptr->end);
 	}
 	
 };
