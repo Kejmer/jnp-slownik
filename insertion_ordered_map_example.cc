@@ -23,8 +23,8 @@ int main()
   std::cout << ref << std::endl;
 
 
-  auto it = iom1.begin();
   auto fin = iom1.end();
+  auto it = iom1.begin();
   while (it != fin) {
     printf("Iterator %d %d\n", it->first, it->second);
     ++it;
