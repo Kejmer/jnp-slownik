@@ -38,27 +38,6 @@ czy należy kopiować tylko raz.
 
 */
 
-/* klamrowanie – szybka informacja, do usunięcia
-funkcja()
-{
-
-}
-
-klasa
-{
-
-}
-
-if () {
-
-}
-
-for () {
-
-}
-etc
-*/
-
 class lookup_error : std::exception
 {
 
@@ -111,7 +90,8 @@ private:
       attach(next);
 		}
 
-		~node() {
+		~node()
+    {
       detach();
 		}
 //		node(const K &key, const V &value, node *previous, node *end) //dodawany na końcu
@@ -144,7 +124,8 @@ private:
 			begin = &end;
 		}
 
-    container(container *other) {
+    container(container *other)
+    {
       end = node();
       begin = &end; //to samo co na górze, skompresować potem
 
@@ -155,11 +136,12 @@ private:
       }
     }
 
-    size_t size() {
+    size_t size() noexcept
+    {
       return _memory.size();
     }
 
-    bool contains(K const &k)
+    bool contains(K const &k) noexcept
     {
         return _memory.count(k) != 0;
     }
@@ -214,14 +196,16 @@ private:
 
 	std::shared_ptr<container> memory_ptr;
 
-	void has_to_copy() {
+	void has_to_copy()
+  {
     if (memory_ptr.use_count() > 1) {
       copy_on_write();
     }
 	}
   bool exists_reference = false; //kiedy tworzymy referencję na obiekt w mapie nie mamy pewności czy ktoś tego obiektu nie zmieni
 
-  void copy_on_write() {
+  void copy_on_write()
+  {
     memory_ptr.reset(new container(memory_ptr.get()));
   }
 
@@ -237,7 +221,7 @@ public:
 	insertion_ordered_map(insertion_ordered_map const &other)
 	{
     //trzeba sprawdzić czy nie istnieją referencje na elementy container
-    memory_ptr = std::shared_ptr(other.memory_ptr);
+    memory_ptr = std::shared_ptr<container>(other.memory_ptr);
     if (other.exists_reference) {
       copy_on_write();
     }
@@ -266,7 +250,7 @@ public:
 	{
 		if (this->contains(k)) return false;
 		has_to_copy();
-		return memory_ptr->insert(k, v); //powinno zawsze true w tym miejscu
+		return memory_ptr->insert(k, v); // assert true
 	}
 
 	void erase(K const &k)
@@ -278,7 +262,8 @@ public:
 
 	void merge(insertion_ordered_map &other)
 	{
-		has_to_copy(); // unless kopiuje siebie w siebie, wtedy nic się nie zmieni
+    if (memory_ptr == other.memory_ptr) return; //merge siebie ze sobą nic nie da
+		has_to_copy();
 		iterator it = other.begin();
 		iterator fin = other.end();
 		while (it != fin) {
@@ -328,7 +313,9 @@ private:
 
 	iterator create_iterator(node *n)
 	{
-
+    iterator it;
+    it.n = n;
+    return n;
 	}
 
 public:
@@ -338,6 +325,7 @@ public:
 	insertion_ordered_map &operator=(insertion_ordered_map other);
 	private:
 		node *n;
+    friend iterator insertion_ordered_map::create_iterator(node *n);
 
 	public:
 		iterator &operator++()
@@ -345,12 +333,12 @@ public:
 			return create_iterator(this->n->next); //co jak next to end?
 		}
 
-		bool operator==(iterator &other)
+		bool operator==(iterator &other) noexcept
 		{
 			return other.n == this->n;
 		}
 
-		bool operator!=(iterator &other)
+		bool operator!=(iterator &other) noexcept
 		{
 			return !(*this == other);
 		}
