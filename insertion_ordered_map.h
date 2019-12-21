@@ -140,7 +140,7 @@ private:
 
 		container()
 		{
-		    end = node();
+	    end = node();
 			begin = &end;
 		}
 
@@ -153,6 +153,10 @@ private:
         this->insert(it->key, it->value);
         it = it->next;
       }
+    }
+
+    size_t size() {
+      return _memory.size();
     }
 
     bool contains(K const &k)
@@ -191,21 +195,21 @@ private:
 			return _memory[k].value;
 		}
 
-		void clean() {
-			node *temp;
-			while (begin != &end) {
-				temp = begin;
-				begin = begin->next;
-				delete temp;
-			}
-			// delete end;
-		}
+		// void clean() {
+		// 	node *temp;
+		// 	while (begin != &end) {
+		// 		temp = begin;
+		// 		begin = begin->next;
+		// 		delete temp;
+		// 	}
+		// 	// delete end;
+		// }
 
-		~container()
-		{
-			clean();
-			//mapa się chyba sama usuwa?
-		}
+		// ~container()
+		// {
+		// 	clean();
+		// 	//mapa się chyba sama usuwa?
+		// }
 	};
 	std::shared_ptr<container> memory_ptr;
 
