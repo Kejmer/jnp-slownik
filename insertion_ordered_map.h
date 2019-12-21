@@ -108,22 +108,13 @@ private:
             attach(next);
 		}
 
-		~node() {
+		~node()
+		{
             detach();
 		}
-//		node(const K &key, const V &value, node *previous, node *end) //dodawany na końcu
-//		{
-//			this->value = value;
-//			this->previous = previous;
-//			this->next = end;
-//			this->key = key;
-//            previous->next = this;
-//            next->previous = this;
-//		}
-		
 	};
 	
-	class container
+	struct container
 	{
         node *begin;
         node end; // end MUSI być przed _memory !
@@ -134,7 +125,7 @@ private:
 			return *end->previous;
 		}
 		
-		container() 
+		container() noexcept
 		{
 		    end = node();
 			begin = &end;
@@ -145,53 +136,43 @@ private:
             return _memory.count(k) != 0;
         }
 
-        bool remove(K const &k)
+        bool erase(K const &k)
         {
-            return _memory.erase(k) != 1;
+            try {
+                if (k == begin->key) begin = begin->next;
+                return _memory.erase(k) != 1;
+            }
+            catch (...) {
+                begin = begin->previous;
+                throw;
+            }
+
         }
 		
 		bool insert(K const &k, V const &v) 
 		{
 		    auto it = _memory.try_emplace(k, k, v, &end);
 		    if (!it.second) {
+		        if (k == begin->key) begin = begin->next;
                 it.first->detach();
                 it.first->attach(&end);
 		    }
-		    // Co z begin?
+		    begin = begin->previous;
 
-			if (begin == end) {
-				_memory.emplace(); // TODO
-			} else {
-				if (_memory.count(k)) { //czasem będziemy robić bezpośrednie inserty (może) przy scalaniu słownika
-					return false;
-				} else {
-					//_memory[K] = new node(k, v, last(), end);
-				}
-			}
-			return true;
+		    return it.second;
 		}
+
+		node &find(K const &k)
+        {
+		    return _memory[k];
+        }
 		
 		V &at(K const &k)
 		{
-			return _memory.find(k)->value; //niedokońca tak chyba
-		}
-		
-		void clean() {
-			node *temp;
-			while (begin != end) {
-				temp = begin;
-				begin = begin->next;
-				delete temp;
-			}
-			delete end;
-		}
-		
-		~container()
-		{
-			clean();
-			//mapa się chyba sama usuwa?
+			return _memory[k].value;
 		}
 	};
+
 	std::shared_ptr<container> memory_ptr;
 
 	//tutaj ta funkcja do dodawania – do zrobienia
@@ -205,7 +186,7 @@ public:
 
 	insertion_ordered_map() noexcept
 	{
-		memory_ptr = shared_ptr<container>(new container());
+		memory_ptr = std::shared_ptr<container>(new container());
 	}
 
 	insertion_ordered_map(insertion_ordered_map const &other)
@@ -239,7 +220,7 @@ public:
 	{
 		if (!this->contains(k)) throw lookup_error();
 		has_to_copy();
-		memory_ptr->remove(k);
+      memory_ptr->erase(k);
 	}
 
 	void merge(insertion_ordered_map &other)
@@ -312,7 +293,7 @@ public:
 
 		bool operator==(iterator &other)
 		{
-			return other.n == this->n
+			return other.n == this->n;
 		}
 
 		bool operator!=(iterator &other)
