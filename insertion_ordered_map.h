@@ -211,12 +211,12 @@ private:
 		// 	//mapa się chyba sama usuwa?
 		// }
 	};
+
 	std::shared_ptr<container> memory_ptr;
 
-	//tutaj ta funkcja do dodawania – do zrobienia
 	void has_to_copy() {
     if (memory_ptr.use_count() > 1) {
-      //Tworzymy kopię
+      copy_on_write();
     }
 	}
   bool exists_reference = false; //kiedy tworzymy referencję na obiekt w mapie nie mamy pewności czy ktoś tego obiektu nie zmieni
