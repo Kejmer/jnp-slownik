@@ -74,42 +74,62 @@ private:
 		node *previous;
 		V value;
 		K key;
-		
+
+        void attach(node *next) noexcept
+        {
+            this->next = next;
+            if (next == next->previous) this->previous = this;
+            else {
+                previous = next->previous;
+                previous->next = this;
+            }
+            next->previous = this;
+        }
+
+        void detach() noexcept
+        {
+            if (next == nullptr) return;
+            previous->next = next;
+            next->previous = previous;
+        }
+
+// Element jest ostatni, gdy next == nullptr, a pierwszy, gdy previous == this.
 		node() noexcept
 		{
 			this->previous = this;
 			// FIXME: Nie ma V()!
 		}
-		
-		node(const K &key, const V &value, node *end) //konstruktor elementu poczatkowego, wskazuje sam na siebie
+
+		node(const K &key, const V &value, node *next)
 		{
 			this->value = value;
-			this->next = end;
-			this->previous = this;
 			this->key = key;
-            end->previous = this;
+
+            attach(next);
 		}
-		
-		node(const K &key, const V &value, node *previous, node *end) //dodawany na końcu
-		{
-			this->value = value;
-			this->previous = previous;
-			this->next = end;
-			this->key = key;
-            previous->next = this;
-            next->previous = this;
+
+		~node() {
+            detach();
 		}
+//		node(const K &key, const V &value, node *previous, node *end) //dodawany na końcu
+//		{
+//			this->value = value;
+//			this->previous = previous;
+//			this->next = end;
+//			this->key = key;
+//            previous->next = this;
+//            next->previous = this;
+//		}
 		
 	};
 	
 	class container
 	{
+        node *begin;
+        node end; // end MUSI być przed _memory !
 		std::unordered_map<K, node, Hash> _memory;
-
-		node &begin;
-		node end;
 		
-		node &last()
+		node &last() // FIXME: czy to potrzebne?
 		{
 			return *end->previous;
 		}
@@ -117,14 +137,30 @@ private:
 		container() 
 		{
 		    end = node();
-			begin = end;
+			begin = &end;
 		}
+
+        bool contains(K const &k)
+        {
+            return _memory.count(k) != 0;
+        }
+
+        bool remove(K const &k)
+        {
+            return _memory.erase(k) != 1;
+        }
 		
 		bool insert(K const &k, V const &v) 
 		{
+		    auto it = _memory.try_emplace(k, k, v, &end);
+		    if (!it.second) {
+                it.first->detach();
+                it.first->attach(&end);
+		    }
+		    // Co z begin?
+
 			if (begin == end) {
-				begin = new node(k, v, end);
-				_memory[k] = begin;
+				_memory.emplace(); // TODO
 			} else {
 				if (_memory.count(k)) { //czasem będziemy robić bezpośrednie inserty (może) przy scalaniu słownika
 					return false;
@@ -133,19 +169,6 @@ private:
 				}
 			}
 			return true;
-		}
-		
-		bool contains(K const &k) 
-		{
-			return _memory.count(k) != 0;
-		}
-		
-		bool remove(K const &k) 
-		{
-			auto search = _memory.find(k);
-			k->previous->next = k->next;
-			k->next->previous = k->previous;
-			_memory.remove(search);
 		}
 		
 		V &at(K const &k)
