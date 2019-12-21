@@ -78,10 +78,12 @@ private:
     void attach(node *next) noexcept
     {
       this->next = next;
-      if (next == next->previous) this->previous = this;
+      if (next == next->previous) { // rozumiem że to dodawanie do begin? raczej nieporzebne bo begina raczej nie będziemy dodawać
+        this->previous = this;
+      }
       else {
-          previous = next->previous;
-          previous->next = this;
+        previous = next->previous;
+        previous->next = this;
       }
       next->previous = this;
     }
@@ -101,16 +103,16 @@ private:
 			// FIXME: Nie ma V()!
 		}
 
-		node(const K &key, const V &value, node *next)
+		node(const K &key, const V &value, node *previous)
 		{
 			this->value = value;
 			this->key = key;
 
-            attach(next);
+      previous->attach(this);
 		}
 
 		~node() {
-            detach();
+      detach();
 		}
 //		node(const K &key, const V &value, node *previous, node *end) //dodawany na końcu
 //		{
@@ -142,15 +144,22 @@ private:
 			begin = &end;
 		}
 
-        bool contains(K const &k)
-        {
-            return _memory.count(k) != 0;
-        }
+    container(container *other) {
+      end = node();
+      begin = &end; //to samo co na górze, skompresować potem
 
-        bool remove(K const &k)
-        {
-            return _memory.erase(k) != 1;
-        }
+
+    }
+
+    bool contains(K const &k)
+    {
+        return _memory.count(k) != 0;
+    }
+
+    bool remove(K const &k)
+    {
+        return _memory.erase(k) != 1;
+    }
 
 		bool insert(K const &k, V const &v)
 		{
@@ -202,6 +211,11 @@ private:
       //Tworzymy kopię
     }
 	}
+  bool exists_reference = false; //kiedy tworzymy referencję na obiekt w mapie nie mamy pewności czy ktoś tego obiektu nie zmieni
+
+  void copy_on_write() {
+    memory_ptr.reset(new container(memory_ptr.get()));
+  }
 
 
 public:
@@ -216,6 +230,9 @@ public:
 	{
     //trzeba sprawdzić czy nie istnieją referencje na elementy container
     memory_ptr = std::shared_ptr(other.memory_ptr);
+    if (other.exists_reference) {
+      copy_on_write();
+    }
 	}
 
 	insertion_ordered_map(insertion_ordered_map &&other)
@@ -258,17 +275,18 @@ public:
 		}
 	}
 
-	V &at(K const &k) //brakuje tej obsłúgi pamięci dzielonej
+	V &at(K const &k)
+	{
+    exists_reference = true;
+		return this->memory_ptr->at(k);
+	}
+
+	V const &at(K const &k) const
 	{
 		return this->memory_ptr->at(k);
 	}
 
-	V const &at(K const &k) const //tutaj nie potrzeba obsługi pamięci
-	{
-		return this->memory_ptr->at(k);
-	}
-
-	V &operator[](K const &k)
+	V &operator[](K const &k) //czy tutaj się liczy jak referencja? do sprawdzenia
 	{
 		return this->at(k);
 	}

@@ -20,7 +20,8 @@ int main()
   for (int i = 0; i < 3; ++i) {
     iom1[keys[i]] = i;
   }
-  // auto &ref = iom1[3];
+  auto &ref = iom1[3];
+  std::cout << ref << std::endl;
 
 //   insertion_ordered_map<int, int> iom2(iom1); // Wykonuje się pełna kopia. Dlaczego?
 //   insertion_ordered_map<int, int> iom3;
