@@ -171,6 +171,12 @@ private:
 		{
 			return _memory[k].value;
 		}
+
+		void clear() noexcept
+        {
+		    _memory.clear();
+		    begin = &end;
+        }
 	};
 
 	std::shared_ptr<container> memory_ptr;
