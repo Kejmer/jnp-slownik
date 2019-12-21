@@ -61,7 +61,7 @@ private:
       attach(next);
     }
 
-    ~node()
+    ~node() noexcept
     {
       detach();
     }
@@ -145,13 +145,13 @@ private:
 
   void copy_on_write()
   {
-    memory_ptr.reset(new container(memory_ptr.get()));
+    memory_ptr = std::make_shared<container>(memory_ptr.get());
   }
 
 public:
   class iterator;
 
-  insertion_ordered_map()
+  insertion_ordered_map() noexcept
   {
     memory_ptr = std::make_shared<container>();
   }
@@ -159,7 +159,7 @@ public:
   insertion_ordered_map(insertion_ordered_map const &other)
   {
     //trzeba sprawdzić czy nie istnieją referencje na elementy container
-    memory_ptr = std::shared_ptr<container>(other.memory_ptr);
+    memory_ptr = other.memory_ptr;
     if (other.exists_reference) {
       copy_on_write();
     }
@@ -167,7 +167,7 @@ public:
 
   insertion_ordered_map(insertion_ordered_map &&other) noexcept
   {
-    memory_ptr = std::shared_ptr(other.memory_ptr);
+    memory_ptr = other.memory_ptr;
   }
 
   ~insertion_ordered_map() noexcept
@@ -178,7 +178,7 @@ public:
   insertion_ordered_map &operator=(insertion_ordered_map other)
   {
     exists_reference = false;
-    memory_ptr = std::shared_ptr(other.memory_ptr);
+    memory_ptr = other.memory_ptr;
     if (other.exists_reference) {
       copy_on_write();
     }
@@ -186,22 +186,22 @@ public:
     return *this;
   }
 
-  bool insert(K const &k, V const &v) noexcept
+  bool insert(K const &k, V const &v)
   {
     has_to_copy();
-    return memory_ptr->insert(k, v); // assert true
+    return memory_ptr->insert(k, v);
   }
 
   void erase(K const &k)
   {
-    if (!this->contains(k)) throw lookup_error();
     has_to_copy();
     memory_ptr->remove(k);
   }
 
-  void merge(insertion_ordered_map &other)
+  void merge(insertion_ordered_map const &other)
   {
-    if (memory_ptr == other.memory_ptr) return; //merge siebie ze sobą nic nie da
+    //merge siebie ze sobą nic nie da.
+    if (memory_ptr.get() == other.memory_ptr.get()) return;
     has_to_copy();
     iterator it = other.begin();
     iterator fin = other.end();
@@ -214,6 +214,7 @@ public:
   V &at(K const &k)
   {
     exists_reference = true;
+    has_to_copy();
     return this->memory_ptr->at(k);
   }
 
@@ -242,7 +243,7 @@ public:
 
 	void clear() //po prostu przestajemy patrzeć
 	{
-		this->memory_ptr.swap(std::make_shared<container>());
+      this->memory_ptr = std::make_shared<container>();
 	}
 
   bool contains(K const &k) const
