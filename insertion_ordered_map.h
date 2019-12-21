@@ -229,7 +229,7 @@ private:
 public:
 	class iterator;
 
-	insertion_ordered_map() noexcept
+	insertion_ordered_map()
 	{
 		memory_ptr = std::shared_ptr<container>(new container());
 	}
@@ -243,19 +243,23 @@ public:
     }
 	}
 
-	insertion_ordered_map(insertion_ordered_map &&other)
+	insertion_ordered_map(insertion_ordered_map &&other) noexcept
 	{
     memory_ptr = std::shared_ptr(other.memory_ptr);
 	}
 
-	~insertion_ordered_map()
+	~insertion_ordered_map() noexcept
 	{
 		memory_ptr.reset();
 	}
 
 	insertion_ordered_map &operator=(insertion_ordered_map other)
 	{
-
+    exists_reference = false;
+    memory_ptr = std::shared_ptr(other.memory_ptr);
+    if (other.exists_reference) {
+      copy_on_write();
+    }
 	}
 
 	bool insert(K const &k, V const &v) noexcept
