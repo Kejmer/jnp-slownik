@@ -113,10 +113,10 @@ private:
         node end; // end MUSI być przed _memory !
 		std::unordered_map<K, node, Hash> _memory;
 
-		node &last() // FIXME: czy to potrzebne?
-		{
-			return *end->previous;
-		}
+		// node &last() // FIXME: czy to potrzebne?
+		// {
+		// 	return *end->previous;
+		// }
 
 		container()
 		{
@@ -136,12 +136,12 @@ private:
       }
     }
 
-    size_t size() noexcept
+    size_t size() const noexcept
     {
       return _memory.size();
     }
 
-    bool contains(K const &k) noexcept
+    bool contains(K const &k) const //bez noexcpt bo count nie jest
     {
         return _memory.count(k) != 0;
     }
@@ -288,12 +288,12 @@ public:
 		return this->at(k);
 	}
 
-	size_t size() const
+	size_t size() const noexcept
 	{
 		return this->memory_ptr->size;
 	}
 
-	bool empty() const
+	bool empty() const noexcept
 	{
 		return this->size() == 0;
 	}
@@ -311,7 +311,7 @@ public:
 
 private:
 
-	iterator create_iterator(node *n)
+	iterator create_iterator(node *n) const
 	{
     iterator it;
     it.n = n;
@@ -343,20 +343,17 @@ public:
 			return !(*this == other);
 		}
 
-		const V operator*() const {
+		const V &operator*() const {
 			return n->value;
 		}
 	};
 
-	//czy begin i end w środku czy na końcu?
-
-
-	iterator begin()
+	iterator begin() const noexcept
 	{
 		return create_iterator(this->memory_ptr->begin); //przerobić obie funkcje aby nie tworzyły za każdym razem tylko ref zwracały – pamiętać o copy on write
 	}
 
-	iterator end()
+	iterator end() const noexcept
 	{
 		return create_iterator(this->memory_ptr->end);
 	}
