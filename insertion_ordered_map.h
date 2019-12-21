@@ -149,8 +149,6 @@ private:
               it.first->second.attach(&end);
           }
           begin = begin->previous;
-          assert(it.first->second.next == &end);
-          assert(&it.first->second == end.previous);
 
           return it.second;
 		}
@@ -247,7 +245,7 @@ public:
 		iterator it = other.begin();
 		iterator fin = other.end();
 		while (it != fin) {
-			memory_ptr->insert(it.n->key, it.n->value);
+			memory_ptr->insert(it->first, it->second);
 			++it;
 		}
 	}
@@ -273,7 +271,7 @@ public:
 
 	size_t size() const noexcept
 	{
-		return this->memory_ptr->size;
+		return this->memory_ptr->size();
 	}
 
 	bool empty() const noexcept
@@ -308,12 +306,14 @@ public:
 	insertion_ordered_map &operator=(insertion_ordered_map other);
 	private:
 		node *n;
+    std::pair<K,V> stored_pair;
 
 		friend class insertion_ordered_map;
 	public:
 		iterator operator++() //bez noexcept bo nullptr
 		{
-			this->n = this->n->next; //co jak next to end?
+			n = n->next; //co jak next to end?
+      stored_pair = std::make_pair(n->key, n->value);
       return *this;
 		}
 
@@ -327,14 +327,18 @@ public:
 			return !(*this == other);
 		}
 
-		const V &operator*() const {
-			return n->value;
-		}
+		const std::pair<K,V> &operator*() const {
+      return stored_pair;
+    }
+    const std::pair<K,V> *operator->() const {
+      return &stored_pair;
+    }
+
 	};
 
 	iterator begin() const noexcept
 	{
-		return create_iterator(this->memory_ptr->begin); //przerobić obie funkcje aby nie tworzyły za każdym razem tylko ref zwracały – pamiętać o copy on write
+		return create_iterator(this->memory_ptr->begin);
 	}
 
 	iterator end() const noexcept

@@ -26,49 +26,54 @@ int main()
   auto it = iom1.begin();
   auto fin = iom1.end();
   while (it != fin) {
-    printf("Iterator %d\n", *it);
+    printf("Iterator %d %d\n", it->first, it->second);
     ++it;
   }
 
   insertion_ordered_map<int, int> iom2(iom1); // Wykonuje się pełna kopia. Dlaczego?
-//   insertion_ordered_map<int, int> iom3;
-//   iom3 = iom2;
+  insertion_ordered_map<int, int> iom3;
+  iom3 = iom2;
 
-//   ref = 10;
-//   assert(iom1[3] == 10);
-//   assert(iom2[3] != 10);
+  ref = 10;
+  assert(iom1[3] == 10);
+  assert(iom2[3] != 10);
 
-//   iom2.erase(3); // Obiekt iom2 dokonuje kopii i przestaje współdzielić dane z iom3.
-//   assert(iom2.size() == 2);
-//   assert(!iom2.contains(3));
-//   assert(iom2.contains(2));
+  iom2.erase(3); // Obiekt iom2 dokonuje kopii i przestaje współdzielić dane z iom3.
+  assert(iom2.size() == 2);
+  assert(!iom2.contains(3));
+  assert(iom2.contains(2));
 
-//   assert(iom3.size() == 3);
-//   assert(iom3.contains(3));
+  assert(iom3.size() == 3);
+  assert(iom3.contains(3));
 
-//   iom2.insert(4, 10);
-//   iom2.insert(1, 10);
-//   assert(iom2.size() == 3);
-//   insertion_ordered_map<int, int> const iom4 = iom2;
-//   {
-//     int order[] = {2, 4, 1};
-//     int values[] = {2, 10, 1};
-//     int i = 0;
-//     for (auto it = iom2.begin(), end = iom2.end(); it != end; ++it, ++i)
-//       assert(it->first == order[i] && it->second == values[i]);
-//     i = 0;
-//     for (auto it = iom4.begin(), end = iom4.end(); it != end; ++it, ++i)
-//       assert(it->first == order[i] && it->second == values[i]);
-//   }
+  iom2.insert(4, 10);
+  iom2.insert(1, 10);
+  assert(iom2.size() == 3);
+  insertion_ordered_map<int, int> const iom4 = iom2;
+  {
+    int order[] = {2, 4, 1};
+    int values[] = {2, 10, 1};
+    int i = 0;
+    for (auto it = iom2.begin(), end = iom2.end(); it != end; ++it, ++i) {
+      printf("KLUCZ: %d, WARTOŚĆ: %d\n", it->first, it->second);
+      printf("KLUCZ: %d, WARTOŚĆ: %d\n", (*it).first, (*it).second);
+      printf("aKLUCZ: %d, aWARTOŚĆ: %d\n", order[i], values[i]);
 
-//   auto piom5 = std::make_unique<insertion_ordered_map<int, int>>();
-//   piom5->insert(4, 0);
-//   assert(piom5->at(4) == 0);
-//   auto iom6(*piom5);
-//   piom5.reset();
-//   assert(iom6.at(4) == 0);
-//   iom6[5] = 5;
-//   iom6[6] = 6;
+      assert(it->first == order[i] && it->second == values[i]);
+    }
+    i = 0;
+    for (auto it = iom4.begin(), end = iom4.end(); it != end; ++it, ++i)
+      assert(it->first == order[i] && it->second == values[i]);
+  }
+
+  auto piom5 = std::make_unique<insertion_ordered_map<int, int>>();
+  piom5->insert(4, 0);
+  assert(piom5->at(4) == 0);
+  auto iom6(*piom5);
+  piom5.reset();
+  assert(iom6.at(4) == 0);
+  iom6[5] = 5;
+  iom6[6] = 6;
 
 //   iom2.merge(iom6);
 //   {
