@@ -152,8 +152,8 @@ private:
 		    auto it = _memory.try_emplace(k, k, v, &end);
 		    if (!it.second) {
 		        if (k == begin->key) begin = begin->next;
-                it.first->detach();
-                it.first->attach(&end);
+                it.first->second.detach();
+                it.first->second.attach(&end);
 		    }
 		    begin = begin->previous;
 
