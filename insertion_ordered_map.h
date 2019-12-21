@@ -32,9 +32,6 @@ Klasa insertion_ordered_map przeźroczysta na wyjątki
 */
 
 /* INNE POMYSŁY
-Jeśli to możliwe sama operacja wstawiania będzie nieudostępnianą operacją
-wykorzystywaną przez Wstawianie i Scalanie, aby tuż przed odpaleniem sprawdzać
-czy należy kopiować tylko raz.
 
 */
 
@@ -107,38 +104,38 @@ private:
 			begin = &end;
 		}
 
-        container(const container *other)
-        {
-          end = node();
-          begin = &end; //skompresować potem
+    container(const container *other)
+    {
+      end = node();
+      begin = &end; //skompresować potem
 
-          node *it = other->begin;
-          while (it != &other->end) { this->insert(it->key, it->value);
-            it = it->next;
-          }
-        }
+      node *it = other->begin;
+      while (it != &other->end) { this->insert(it->key, it->value);
+        it = it->next;
+      }
+    }
 
-        size_t size() const noexcept
-        {
-          return _memory.size();
-        }
+    size_t size() const noexcept
+    {
+      return _memory.size();
+    }
 
-        bool contains(K const &k) const //bez noexcpt bo count nie jest
-        {
-            return _memory.count(k) != 0;
-        }
+    bool contains(K const &k) const //bez noexcpt bo count nie jest
+    {
+        return _memory.count(k) != 0;
+    }
 
-        bool remove(K const &k)
-        {
-          try {
-            if (k == begin->key) begin = begin->next;
-            return _memory.erase(k) != 1;
-          }
-          catch (...) {
-            begin = begin->previous;
-            throw;
-          }
-        }
+    bool remove(K const &k)
+    {
+      try {
+        if (k == begin->key) begin = begin->next;
+        return _memory.erase(k) != 1;
+      }
+      catch (...) {
+        begin = begin->previous;
+        throw;
+      }
+    }
 
 		bool insert(K const &k, V const &v)
 		{
@@ -220,6 +217,8 @@ public:
     if (other.exists_reference) {
       copy_on_write();
     }
+
+    return *this;
 	}
 
 	bool insert(K const &k, V const &v) noexcept
@@ -307,9 +306,10 @@ public:
 
 		friend class insertion_ordered_map;
 	public:
-		void operator++() //bez noexcept bo nullptr
+		iterator operator++() //bez noexcept bo nullptr
 		{
 			this->n = this->n->next; //co jak next to end?
+      return *this;
 		}
 
 		bool operator==(iterator &other) const noexcept
