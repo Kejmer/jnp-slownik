@@ -283,8 +283,11 @@ public:
 		return this->memory_ptr->at(k);
 	}
 
+  template <typename = std::enable_if_t<is_default_constructible<V>::value>>
 	V &operator[](K const &k) //czy tutaj się liczy jak referencja? do sprawdzenia
 	{
+    if (!this->contains(k))
+      this->insert(k, V());
 		return this->at(k);
 	}
 
