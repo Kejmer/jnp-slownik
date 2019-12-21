@@ -17,7 +17,7 @@ Referencja wartości O(1) // smart pointer check
 Operator indeksowania O(1)
 Rozmiar słownika O(1) – DONE
 Sprawdzanie niepustości O(1) – DONE
-Czyszczenie słownika O(n) 
+Czyszczenie słownika O(n)
 Sprawdzanie instnienia klucza O(1) – DONE
 Klasa iteratora: O(1)
 	konstruktor kopiujący
@@ -26,12 +26,12 @@ Klasa iteratora: O(1)
 		++
 		==
 		!=
-		* (dereferencja) 
+		* (dereferencja)
 Klasa lookup_error (na zewnątrz klasy, dziedziczy po std::exception) – niepewny czy done
 Klasa insertion_ordered_map przeźroczysta na wyjątki
 */
 
-/* INNE POMYSŁY 
+/* INNE POMYSŁY
 Jeśli to możliwe sama operacja wstawiania będzie nieudostępnianą operacją
 wykorzystywaną przez Wstawianie i Scalanie, aby tuż przed odpaleniem sprawdzać
 czy należy kopiować tylko raz.
@@ -39,33 +39,33 @@ czy należy kopiować tylko raz.
 */
 
 /* klamrowanie – szybka informacja, do usunięcia
-funkcja() 
+funkcja()
 {
-	
+
 }
 
-klasa 
+klasa
 {
-	
+
 }
 
 if () {
-	
+
 }
 
 for () {
-	
+
 }
 etc
 */
 
 class lookup_error : std::exception
 {
-	
+
 };
 
 template <class K, class V, class Hash = std::hash<K>>
-class insertion_ordered_map 
+class insertion_ordered_map
 {
 private:
 	struct node
@@ -75,28 +75,29 @@ private:
 		V value;
 		K key;
 
-        void attach(node *next) noexcept
-        {
-            this->next = next;
-            if (next == next->previous) this->previous = this;
-            else {
-                previous = next->previous;
-                previous->next = this;
-            }
-            next->previous = this;
-        }
+    void attach(node *next) noexcept
+    {
+      this->next = next;
+      if (next == next->previous) this->previous = this;
+      else {
+          previous = next->previous;
+          previous->next = this;
+      }
+      next->previous = this;
+    }
 
-        void detach() noexcept
-        {
-            if (next == nullptr) return;
-            previous->next = next;
-            next->previous = previous;
-        }
+    void detach() noexcept
+    {
+      if (next == nullptr) return;
+      previous->next = next;
+      next->previous = previous;
+    }
 
 // Element jest ostatni, gdy next == nullptr, a pierwszy, gdy previous == this.
 		node() noexcept
 		{
 			this->previous = this;
+
 			// FIXME: Nie ma V()!
 		}
 
@@ -120,21 +121,22 @@ private:
 //            previous->next = this;
 //            next->previous = this;
 //		}
-		
+
 	};
-	
+
 	class container
 	{
+	public:
         node *begin;
         node end; // end MUSI być przed _memory !
 		std::unordered_map<K, node, Hash> _memory;
-		
+
 		node &last() // FIXME: czy to potrzebne?
 		{
 			return *end->previous;
 		}
-		
-		container() 
+
+		container()
 		{
 		    end = node();
 			begin = &end;
@@ -149,8 +151,8 @@ private:
         {
             return _memory.erase(k) != 1;
         }
-		
-		bool insert(K const &k, V const &v) 
+
+		bool insert(K const &k, V const &v)
 		{
 		    auto it = _memory.try_emplace(k, k, v, &end);
 		    if (!it.second) {
@@ -159,7 +161,7 @@ private:
 		    }
 		    // Co z begin?
 
-			if (begin == end) {
+			if (begin == &end) {
 				_memory.emplace(); // TODO
 			} else {
 				if (_memory.count(k)) { //czasem będziemy robić bezpośrednie inserty (może) przy scalaniu słownika
@@ -170,22 +172,22 @@ private:
 			}
 			return true;
 		}
-		
+
 		V &at(K const &k)
 		{
-			return _memory.find(k)->value; //niedokońca tak chyba
+			return _memory[k].value;
 		}
-		
+
 		void clean() {
 			node *temp;
-			while (begin != end) {
+			while (begin != &end) {
 				temp = begin;
 				begin = begin->next;
 				delete temp;
 			}
-			delete end;
+			// delete end;
 		}
-		
+
 		~container()
 		{
 			clean();
@@ -196,26 +198,29 @@ private:
 
 	//tutaj ta funkcja do dodawania – do zrobienia
 	void has_to_copy() {
-		throw;
+    if (memory_ptr.use_count() > 1) {
+      //Tworzymy kopię
+    }
 	}
-	
-	
+
+
 public:
 	class iterator;
 
 	insertion_ordered_map() noexcept
 	{
-		memory_ptr = shared_ptr<container>(new container());
+		memory_ptr = std::shared_ptr<container>(new container());
 	}
 
 	insertion_ordered_map(insertion_ordered_map const &other)
 	{
-
+    //trzeba sprawdzić czy nie istnieją referencje na elementy container
+    memory_ptr = std::shared_ptr(other.memory_ptr);
 	}
 
 	insertion_ordered_map(insertion_ordered_map &&other)
 	{
-
+    memory_ptr = std::shared_ptr(other.memory_ptr);
 	}
 
 	~insertion_ordered_map()
@@ -285,7 +290,7 @@ public:
 
 	bool contains(K const &k) const
 	{
-		this->memory_ptr->contains(k);
+		return this->memory_ptr->contains(k);
 	}
 
 
@@ -312,7 +317,7 @@ public:
 
 		bool operator==(iterator &other)
 		{
-			return other.n == this->n
+			return other.n == this->n;
 		}
 
 		bool operator!=(iterator &other)
@@ -339,7 +344,7 @@ public:
 	{
 		return create_iterator(this->memory_ptr->end);
 	}
-	
+
 };
 
 
