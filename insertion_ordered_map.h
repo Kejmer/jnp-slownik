@@ -67,9 +67,13 @@ private:
           next->previous = this;
         }
 
-        void detach() const noexcept
+        void detach() noexcept
         {
           if (next == nullptr) return;
+          if (previous == this) {
+            next->previous = next;
+            return;
+          }
           previous->next = next;
           next->previous = previous;
         }
