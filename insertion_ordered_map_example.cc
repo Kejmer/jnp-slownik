@@ -23,7 +23,15 @@ int main()
   auto &ref = iom1[3];
   std::cout << ref << std::endl;
 
-  insertion_ordered_map<int, int> iom2(iom1); // Wykonuje się pełna kopia. Dlaczego?
+
+  auto it = iom1.begin();
+  auto fin = iom1.end();
+  while (it != fin) {
+    std::cout << *it << std::endl;
+    ++it;
+  }
+
+//   insertion_ordered_map<int, int> iom2(iom1); // Wykonuje się pełna kopia. Dlaczego?
 //   insertion_ordered_map<int, int> iom3;
 //   iom3 = iom2;
 
