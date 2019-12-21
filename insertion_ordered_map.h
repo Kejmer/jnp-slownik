@@ -325,7 +325,6 @@ public:
 	insertion_ordered_map &operator=(insertion_ordered_map other);
 	private:
 		node *n;
-    friend iterator insertion_ordered_map::create_iterator(node *n);
 
 	public:
 		iterator &operator++()
