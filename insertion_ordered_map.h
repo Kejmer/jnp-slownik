@@ -293,7 +293,7 @@ private:
 	{
     iterator it;
     it.n = n;
-    return n;
+    return it;
 	}
 
 public:
@@ -334,7 +334,7 @@ public:
 
 	iterator end() const noexcept
 	{
-		return create_iterator(this->memory_ptr->end);
+		return create_iterator(&this->memory_ptr->end);
 	}
 
 };
