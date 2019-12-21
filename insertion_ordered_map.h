@@ -4,6 +4,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <memory>
+#include <cassert>
 
 /* TODO LIST
 Konstruktor bezparametrowy O(1) – DONE
@@ -58,8 +59,8 @@ private:
             this->previous = this;
           }
           else {
-            previous = next->previous;
-            previous->next = this;
+            this->previous = next->previous;
+            this->previous->next = this;
           }
           next->previous = this;
         }
@@ -104,14 +105,12 @@ private:
 
 		container() noexcept
 		{
-		    end = node();
 			begin = &end;
 		}
 
     container(const container *other)
     {
-      end = node();
-      begin = &end; //skompresować potem
+      begin = &end;
 
       node *it = other->begin;
       while (it != &other->end) { this->insert(it->key, it->value);
@@ -150,6 +149,8 @@ private:
               it.first->second.attach(&end);
           }
           begin = begin->previous;
+          assert(it.first->second.next == &end);
+          assert(&it.first->second == end.previous);
 
           return it.second;
 		}

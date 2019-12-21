@@ -14,7 +14,6 @@ namespace {
 int main()
 {
   int keys[] = {3, 1, 2};
-
   insertion_ordered_map<int, int> iom1 = f({});
 
   for (int i = 0; i < 3; ++i) {
@@ -27,11 +26,11 @@ int main()
   auto it = iom1.begin();
   auto fin = iom1.end();
   while (it != fin) {
-    std::cout << *it << std::endl;
+    printf("Iterator %d\n", *it);
     ++it;
   }
 
-//   insertion_ordered_map<int, int> iom2(iom1); // Wykonuje się pełna kopia. Dlaczego?
+  insertion_ordered_map<int, int> iom2(iom1); // Wykonuje się pełna kopia. Dlaczego?
 //   insertion_ordered_map<int, int> iom3;
 //   iom3 = iom2;
 
