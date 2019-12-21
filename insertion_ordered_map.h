@@ -6,36 +6,6 @@
 #include <memory>
 #include <cassert>
 
-/* TODO LIST
-Konstruktor bezparametrowy O(1) – DONE
-Konstruktor kopiujący O(1) O(n) copy-on-write
-Konstruktor przenoszący O(1)
-Operator przypisania O(1)
-Wstawianie do słownika O(1) – DONE
-Usuwanie ze słownika O(1) – DONE
-Scalanie słowników O(n+m) – prawie DONE
-Referencja wartości O(1) // smart pointer check
-Operator indeksowania O(1)
-Rozmiar słownika O(1) – DONE
-Sprawdzanie niepustości O(1) – DONE
-Czyszczenie słownika O(n)
-Sprawdzanie instnienia klucza O(1) – DONE
-Klasa iteratora: O(1)
-	konstruktor kopiujący
-	konstruktor bezparametrowy
-	operatory:
-		++
-		==
-		!=
-		* (dereferencja)
-Klasa lookup_error (na zewnątrz klasy, dziedziczy po std::exception) – niepewny czy done
-Klasa insertion_ordered_map przeźroczysta na wyjątki
-*/
-
-/* INNE POMYSŁY
-
-*/
-
 class lookup_error : std::exception
 {
 
@@ -45,75 +15,76 @@ template <class K, class V, class Hash = std::hash<K>>
 class insertion_ordered_map
 {
 private:
-	struct node
-	{
-		node *next = nullptr;
-		node *previous;
-		V value;
-		K key;
+  struct node
+  {
+    node *next = nullptr;
+    node *previous;
+    V value;
+    K key;
 
-        void attach(node *next) noexcept
-        {
-          this->next = next;
-          if (next == next->previous) {
-            this->previous = this;
-          }
-          else {
-            this->previous = next->previous;
-            this->previous->next = this;
-          }
-          next->previous = this;
-        }
+    void attach(node *next) noexcept
+    {
+      this->next = next;
+      if (next == next->previous) {
+        this->previous = this;
+      }
+      else {
+        this->previous = next->previous;
+        this->previous->next = this;
+      }
+      next->previous = this;
+    }
 
-        void detach() noexcept
-        {
-          if (next == nullptr) return;
-          if (previous == this) {
-            next->previous = next;
-            return;
-          }
-          previous->next = next;
-          next->previous = previous;
-        }
+    void detach() noexcept
+    {
+      if (next == nullptr) return;
+      if (previous == this) {
+        next->previous = next;
+        return;
+      }
+      previous->next = next;
+      next->previous = previous;
+    }
 
 // Element jest ostatni, gdy next == nullptr, a pierwszy, gdy previous == this.
-		node() noexcept
-		{
-          this->previous = this;
-          // FIXME: Nie ma V()!
-		}
+    node() noexcept
+    {
+      this->previous = this;
+      // FIXME: Nie ma V()!
+    }
 
-		node(const K &key, const V &value, node *next) //doklejamy tuż przed next
-		{
-          this->value = value;
-          this->key = key;
+    node(const K &key, const V &value, node *next)
+    {
+      this->value = value;
+      this->key = key;
 
-          attach(next);
-		}
+      attach(next);
+    }
 
-		~node()
-		{
-          detach();
-		}
-	};
+    ~node()
+    {
+      detach();
+    }
+  };
 
-	struct container
-	{
-        node *begin;
-        node end; // end MUSI być przed _memory !
-		std::unordered_map<K, node, Hash> _memory;
+  struct container
+  {
+    node *begin;
+    node end;
+    std::unordered_map<K, node, Hash> _memory;
 
-		container() noexcept
-		{
-			begin = &end;
-		}
+    container() noexcept
+    {
+        begin = &end;
+    }
 
     container(const container *other)
     {
       begin = &end;
 
       node *it = other->begin;
-      while (it != &other->end) { this->insert(it->key, it->value);
+      while (it != &other->end) {
+        this->insert(it->key, it->value);
         it = it->next;
       }
     }
@@ -123,16 +94,16 @@ private:
       return _memory.size();
     }
 
-    bool contains(K const &k) const //bez noexcpt bo count nie jest
+    bool contains(K const &k) const
     {
         return _memory.count(k) != 0;
     }
 
-    bool remove(K const &k)
+    void remove(K const &k)
     {
       try {
         if (k == begin->key) begin = begin->next;
-        return _memory.erase(k) != 1;
+        if (_memory.erase(k) != 1) throw lookup_error();
       }
       catch (...) {
         begin = begin->previous;
@@ -140,37 +111,30 @@ private:
       }
     }
 
-		bool insert(K const &k, V const &v)
-		{
-          auto it = _memory.try_emplace(k, k, v, &end);
-          if (!it.second) {
-              if (k == begin->key) begin = begin->next;
-              it.first->second.detach();
-              it.first->second.attach(&end);
-          }
-          begin = begin->previous;
+    bool insert(K const &k, V const &v)
+    {
+      auto it = _memory.try_emplace(k, k, v, &end);
+      if (!it.second) {
+        if (k == begin->key) begin = begin->next;
+        it.first->second.detach();
+        it.first->second.attach(&end);
+      }
+      begin = begin->previous;
 
-          return it.second;
-		}
+      return it.second;
+    }
 
-		node &find(K const &k)
-        {
-          return _memory[k];
-        }
-
-		V &at(K const &k)
-		{
-          return _memory[k].value;
-		}
-
-		void clear() noexcept
-        {
-          _memory.clear();
-          begin = &end;
-        }
-	};
+    V &at(K const &k)
+    {
+      if (_memory.count(k) != 1) throw lookup_error();
+      return _memory[k].value;
+    }
+  };
 
   std::shared_ptr<container> memory_ptr;
+// Kiedy tworzymy referencję na obiekt w mapie nie mamy pewności czy ktoś
+// tego obiektu nie zmieni.
+  bool exists_reference = false;
 
   void has_to_copy()
   {
@@ -178,13 +142,11 @@ private:
       copy_on_write();
     }
   }
-  bool exists_reference = false; //kiedy tworzymy referencję na obiekt w mapie nie mamy pewności czy ktoś tego obiektu nie zmieni
 
   void copy_on_write()
   {
     memory_ptr.reset(new container(memory_ptr.get()));
   }
-
 
 public:
   class iterator;
