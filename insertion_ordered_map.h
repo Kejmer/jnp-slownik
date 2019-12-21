@@ -78,7 +78,7 @@ private:
     void attach(node *next) noexcept
     {
       this->next = next;
-      if (next == next->previous) { // rozumiem że to dodawanie do begin? raczej nieporzebne bo begina raczej nie będziemy dodawać
+      if (next == next->previous) {
         this->previous = this;
       }
       else {
@@ -103,12 +103,12 @@ private:
 			// FIXME: Nie ma V()!
 		}
 
-		node(const K &key, const V &value, node *previous)
+		node(const K &key, const V &value, node *next) //doklejamy tuż przed next
 		{
 			this->value = value;
 			this->key = key;
 
-      previous->attach(this);
+      attach(next);
 		}
 
 		~node() {
@@ -148,7 +148,11 @@ private:
       end = node();
       begin = &end; //to samo co na górze, skompresować potem
 
-
+      node *it = other.begin;
+      while (it != nullptr) {
+        this->insert(it->key, it->value);
+        it = it->next;
+      }
     }
 
     bool contains(K const &k)
@@ -163,11 +167,11 @@ private:
 
 		bool insert(K const &k, V const &v)
 		{
-		    auto it = _memory.try_emplace(k, k, v, &end);
-		    if (!it.second) {
-                it.first->detach();
-                it.first->attach(&end);
-		    }
+	    auto it = _memory.try_emplace(k, k, v, &end);
+	    if (!it.second) {
+        it.first->detach();
+        it.first->attach(&end);
+	    }
 		    // Co z begin?
 
 			if (begin == &end) {
