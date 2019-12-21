@@ -198,7 +198,6 @@ public:
 
   bool insert(K const &k, V const &v) noexcept
   {
-    if (this->contains(k)) return false;
     has_to_copy();
     return memory_ptr->insert(k, v); // assert true
   }
