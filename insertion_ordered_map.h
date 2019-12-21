@@ -54,58 +54,52 @@ private:
 		V value;
 		K key;
 
-    void attach(node *next) noexcept
-    {
-      this->next = next;
-      if (next == next->previous) {
-        this->previous = this;
-      }
-      else {
-        previous = next->previous;
-        previous->next = this;
-      }
-      next->previous = this;
-    }
+        void attach(node *next) noexcept
+        {
+          this->next = next;
+          if (next == next->previous) {
+            this->previous = this;
+          }
+          else {
+            previous = next->previous;
+            previous->next = this;
+          }
+          next->previous = this;
+        }
 
-    void detach() noexcept
-    {
-      if (next == nullptr) return;
-      previous->next = next;
-      next->previous = previous;
-    }
+        void detach() const noexcept
+        {
+          if (next == nullptr) return;
+          previous->next = next;
+          next->previous = previous;
+        }
 
 // Element jest ostatni, gdy next == nullptr, a pierwszy, gdy previous == this.
 		node() noexcept
 		{
-			this->previous = this;
-
-			// FIXME: Nie ma V()!
+          this->previous = this;
+          // FIXME: Nie ma V()!
 		}
 
 		node(const K &key, const V &value, node *next) //doklejamy tuż przed next
 		{
-			this->value = value;
-			this->key = key;
+          this->value = value;
+          this->key = key;
 
-            attach(next);
+          attach(next);
 		}
 
 		~node()
 		{
-            detach();
+          detach();
 		}
 	};
-	
+
 	struct container
 	{
         node *begin;
         node end; // end MUSI być przed _memory !
 		std::unordered_map<K, node, Hash> _memory;
-
-		// node &last() // FIXME: czy to potrzebne?
-		// {
-		// 	return *end->previous;
-		// }
 
 		container() noexcept
 		{
@@ -113,27 +107,26 @@ private:
 			begin = &end;
 		}
 
-    container(container *other)
-    {
-      end = node();
-      begin = &end; //skompresować potem
+        container(const container *other)
+        {
+          end = node();
+          begin = &end; //skompresować potem
 
-      node *it = other->begin;
-      while (it != &other->end) {
-        this->insert(it->key, it->value);
-        it = it->next;
-      }
-    }
+          node *it = other->begin;
+          while (it != &other->end) { this->insert(it->key, it->value);
+            it = it->next;
+          }
+        }
 
-    size_t size() const noexcept
-    {
-      return _memory.size();
-    }
+        size_t size() const noexcept
+        {
+          return _memory.size();
+        }
 
-    bool contains(K const &k) const //bez noexcpt bo count nie jest
-    {
-        return _memory.count(k) != 0;
-    }
+        bool contains(K const &k) const //bez noexcpt bo count nie jest
+        {
+            return _memory.count(k) != 0;
+        }
 
         bool remove(K const &k)
         {
@@ -146,34 +139,34 @@ private:
             throw;
           }
         }
-		
-		bool insert(K const &k, V const &v) 
-		{
-		    auto it = _memory.try_emplace(k, k, v, &end);
-		    if (!it.second) {
-		        if (k == begin->key) begin = begin->next;
-                it.first->second.detach();
-                it.first->second.attach(&end);
-		    }
-		    begin = begin->previous;
 
-		    return it.second;
+		bool insert(K const &k, V const &v)
+		{
+          auto it = _memory.try_emplace(k, k, v, &end);
+          if (!it.second) {
+              if (k == begin->key) begin = begin->next;
+              it.first->second.detach();
+              it.first->second.attach(&end);
+          }
+          begin = begin->previous;
+
+          return it.second;
 		}
 
 		node &find(K const &k)
         {
-		    return _memory[k];
+          return _memory[k];
         }
-		
+
 		V &at(K const &k)
 		{
-			return _memory[k].value;
+          return _memory[k].value;
 		}
 
 		void clear() noexcept
         {
-		    _memory.clear();
-		    begin = &end;
+          _memory.clear();
+          begin = &end;
         }
 	};
 
@@ -198,7 +191,7 @@ public:
 
 	insertion_ordered_map()
 	{
-		memory_ptr = std::shared_ptr<container>(new container());
+		memory_ptr = std::make_shared<container>();
 	}
 
 	insertion_ordered_map(insertion_ordered_map const &other)
