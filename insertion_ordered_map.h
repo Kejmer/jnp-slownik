@@ -326,27 +326,26 @@ public:
 	private:
 		node *n;
 
+		friend class insertion_ordered_map;
 	public:
-		iterator &operator++()
+		void operator++() //bez noexcept bo nullptr
 		{
-			return create_iterator(this->n->next); //co jak next to end?
+			this->n = this->n->next; //co jak next to end?
 		}
 
-		bool operator==(iterator &other) noexcept
+		bool operator==(iterator &other) const noexcept
 		{
 			return other.n == this->n;
 		}
 
-		bool operator!=(iterator &other) noexcept
+		bool operator!=(iterator &other) const noexcept
 		{
 			return !(*this == other);
 		}
 
-		V operator*() {
+		const V operator*() const {
 			return n->value;
 		}
-
-		friend class insertion_ordered_map;
 	};
 
 	//czy begin i end w środku czy na końcu?
