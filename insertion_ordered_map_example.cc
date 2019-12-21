@@ -26,7 +26,7 @@ int main()
   auto fin = iom1.end();
   auto it = iom1.begin();
   while (it != fin) {
-    printf("Iterator %d %d\n", it->first, it->second);
+    printf("Iterator %d %d\n", (*it).first, (*it).second);
     ++it;
   }
 

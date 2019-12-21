@@ -6,6 +6,36 @@
 #include <memory>
 #include <cassert>
 
+/* TODO LIST
+Konstruktor bezparametrowy O(1) – DONE
+Konstruktor kopiujący O(1) O(n) copy-on-write
+Konstruktor przenoszący O(1)
+Operator przypisania O(1)
+Wstawianie do słownika O(1) – DONE
+Usuwanie ze słownika O(1) – DONE
+Scalanie słowników O(n+m) – prawie DONE
+Referencja wartości O(1) // smart pointer check
+Operator indeksowania O(1)
+Rozmiar słownika O(1) – DONE
+Sprawdzanie niepustości O(1) – DONE
+Czyszczenie słownika O(n)
+Sprawdzanie instnienia klucza O(1) – DONE
+Klasa iteratora: O(1)
+	konstruktor kopiujący
+	konstruktor bezparametrowy
+	operatory:
+		++
+		==
+		!=
+		* (dereferencja)
+Klasa lookup_error (na zewnątrz klasy, dziedziczy po std::exception) – niepewny czy done
+Klasa insertion_ordered_map przeźroczysta na wyjątki
+*/
+
+/* INNE POMYSŁY
+
+*/
+
 class lookup_error : std::exception
 {
 
@@ -15,12 +45,12 @@ template <class K, class V, class Hash = std::hash<K>>
 class insertion_ordered_map
 {
 private:
-  struct node
-  {
-    node *next = nullptr;
-    node *previous;
-    V value;
-    K key;
+	struct node
+	{
+		node *next = nullptr;
+		node *previous;
+		V value;
+		K key;
 
         void attach(node *next) noexcept
         {
@@ -47,36 +77,36 @@ private:
         }
 
 // Element jest ostatni, gdy next == nullptr, a pierwszy, gdy previous == this.
-    node() noexcept
-    {
+		node() noexcept
+		{
           this->previous = this;
           // FIXME: Nie ma V()!
-    }
+		}
 
-    node(const K &key, const V &value, node *next) //doklejamy tuż przed next
-    {
+		node(const K &key, const V &value, node *next) //doklejamy tuż przed next
+		{
           this->value = value;
           this->key = key;
 
           attach(next);
-    }
+		}
 
-    ~node()
-    {
+		~node()
+		{
           detach();
-    }
-  };
+		}
+	};
 
-  struct container
-  {
+	struct container
+	{
         node *begin;
         node end; // end MUSI być przed _memory !
-    std::unordered_map<K, node, Hash> _memory;
+		std::unordered_map<K, node, Hash> _memory;
 
-    container() noexcept
-    {
-      begin = &end;
-    }
+		container() noexcept
+		{
+			begin = &end;
+		}
 
     container(const container *other)
     {
@@ -110,8 +140,8 @@ private:
       }
     }
 
-    bool insert(K const &k, V const &v)
-    {
+		bool insert(K const &k, V const &v)
+		{
           auto it = _memory.try_emplace(k, k, v, &end);
           if (!it.second) {
               if (k == begin->key) begin = begin->next;
@@ -119,28 +149,26 @@ private:
               it.first->second.attach(&end);
           }
           begin = begin->previous;
-          assert(it.first->second.next == &end);
-          assert(&it.first->second == end.previous);
 
           return it.second;
-    }
+		}
 
-    node &find(K const &k)
+		node &find(K const &k)
         {
           return _memory[k];
         }
 
-    V &at(K const &k)
-    {
+		V &at(K const &k)
+		{
           return _memory[k].value;
-    }
+		}
 
-    void clear() noexcept
+		void clear() noexcept
         {
           _memory.clear();
           begin = &end;
         }
-  };
+	};
 
   std::shared_ptr<container> memory_ptr;
 
@@ -250,10 +278,10 @@ public:
     return this->size() == 0;
   }
 
-  void clear() //po prostu przestajemy patrzeć
-  {
-    this->memory_ptr.reset(std::make_shared<container>());
-  }
+	void clear() //po prostu przestajemy patrzeć
+	{
+		this->memory_ptr.swap(std::make_shared<container>());
+	}
 
   bool contains(K const &k) const
   {
@@ -282,7 +310,7 @@ public:
 
     friend class insertion_ordered_map;
   public:
-    iterator operator++() //bez noexcept bo nullptr
+    iterator &operator++() //bez noexcept bo nullptr
     {
       n = n->next; //co jak next to end?
       stored_pair = std::make_pair(n->key, n->value);
