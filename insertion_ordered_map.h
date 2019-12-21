@@ -17,7 +17,7 @@ Referencja wartości O(1) // smart pointer check
 Operator indeksowania O(1)
 Rozmiar słownika O(1) – DONE
 Sprawdzanie niepustości O(1) – DONE
-Czyszczenie słownika O(n) 
+Czyszczenie słownika O(n)
 Sprawdzanie instnienia klucza O(1) – DONE
 Klasa iteratora: O(1)
 	konstruktor kopiujący
@@ -26,46 +26,25 @@ Klasa iteratora: O(1)
 		++
 		==
 		!=
-		* (dereferencja) 
+		* (dereferencja)
 Klasa lookup_error (na zewnątrz klasy, dziedziczy po std::exception) – niepewny czy done
 Klasa insertion_ordered_map przeźroczysta na wyjątki
 */
 
-/* INNE POMYSŁY 
+/* INNE POMYSŁY
 Jeśli to możliwe sama operacja wstawiania będzie nieudostępnianą operacją
 wykorzystywaną przez Wstawianie i Scalanie, aby tuż przed odpaleniem sprawdzać
 czy należy kopiować tylko raz.
 
 */
 
-/* klamrowanie – szybka informacja, do usunięcia
-funkcja() 
-{
-	
-}
-
-klasa 
-{
-	
-}
-
-if () {
-	
-}
-
-for () {
-	
-}
-etc
-*/
-
 class lookup_error : std::exception
 {
-	
+
 };
 
 template <class K, class V, class Hash = std::hash<K>>
-class insertion_ordered_map 
+class insertion_ordered_map
 {
 private:
 	struct node
@@ -75,32 +54,35 @@ private:
 		V value;
 		K key;
 
-        void attach(node *next) noexcept
-        {
-            this->next = next;
-            if (next == next->previous) this->previous = this;
-            else {
-                previous = next->previous;
-                previous->next = this;
-            }
-            next->previous = this;
-        }
+    void attach(node *next) noexcept
+    {
+      this->next = next;
+      if (next == next->previous) {
+        this->previous = this;
+      }
+      else {
+        previous = next->previous;
+        previous->next = this;
+      }
+      next->previous = this;
+    }
 
-        void detach() noexcept
-        {
-            if (next == nullptr) return;
-            previous->next = next;
-            next->previous = previous;
-        }
+    void detach() noexcept
+    {
+      if (next == nullptr) return;
+      previous->next = next;
+      next->previous = previous;
+    }
 
 // Element jest ostatni, gdy next == nullptr, a pierwszy, gdy previous == this.
 		node() noexcept
 		{
 			this->previous = this;
+
 			// FIXME: Nie ma V()!
 		}
 
-		node(const K &key, const V &value, node *next)
+		node(const K &key, const V &value, node *next) //doklejamy tuż przed next
 		{
 			this->value = value;
 			this->key = key;
@@ -119,34 +101,50 @@ private:
         node *begin;
         node end; // end MUSI być przed _memory !
 		std::unordered_map<K, node, Hash> _memory;
-		
-		node &last() // FIXME: czy to potrzebne?
-		{
-			return *end->previous;
-		}
-		
+
+		// node &last() // FIXME: czy to potrzebne?
+		// {
+		// 	return *end->previous;
+		// }
+
 		container() noexcept
 		{
 		    end = node();
 			begin = &end;
 		}
 
-        bool contains(K const &k)
-        {
-            return _memory.count(k) != 0;
-        }
+    container(container *other)
+    {
+      end = node();
+      begin = &end; //skompresować potem
 
-        bool erase(K const &k)
-        {
-            try {
-                if (k == begin->key) begin = begin->next;
-                return _memory.erase(k) != 1;
-            }
-            catch (...) {
-                begin = begin->previous;
-                throw;
-            }
+      node *it = other->begin;
+      while (it != &other->end) {
+        this->insert(it->key, it->value);
+        it = it->next;
+      }
+    }
 
+    size_t size() const noexcept
+    {
+      return _memory.size();
+    }
+
+    bool contains(K const &k) const //bez noexcpt bo count nie jest
+    {
+        return _memory.count(k) != 0;
+    }
+
+        bool remove(K const &k)
+        {
+          try {
+            if (k == begin->key) begin = begin->next;
+            return _memory.erase(k) != 1;
+          }
+          catch (...) {
+            begin = begin->previous;
+            throw;
+          }
         }
 		
 		bool insert(K const &k, V const &v) 
@@ -181,57 +179,74 @@ private:
 
 	std::shared_ptr<container> memory_ptr;
 
-	//tutaj ta funkcja do dodawania – do zrobienia
-	void has_to_copy() {
-		throw;
+	void has_to_copy()
+  {
+    if (memory_ptr.use_count() > 1) {
+      copy_on_write();
+    }
 	}
-	
-	
+  bool exists_reference = false; //kiedy tworzymy referencję na obiekt w mapie nie mamy pewności czy ktoś tego obiektu nie zmieni
+
+  void copy_on_write()
+  {
+    memory_ptr.reset(new container(memory_ptr.get()));
+  }
+
+
 public:
 	class iterator;
 
-	insertion_ordered_map() noexcept
+	insertion_ordered_map()
 	{
 		memory_ptr = std::shared_ptr<container>(new container());
 	}
 
 	insertion_ordered_map(insertion_ordered_map const &other)
 	{
-
+    //trzeba sprawdzić czy nie istnieją referencje na elementy container
+    memory_ptr = std::shared_ptr<container>(other.memory_ptr);
+    if (other.exists_reference) {
+      copy_on_write();
+    }
 	}
 
-	insertion_ordered_map(insertion_ordered_map &&other)
+	insertion_ordered_map(insertion_ordered_map &&other) noexcept
 	{
-
+    memory_ptr = std::shared_ptr(other.memory_ptr);
 	}
 
-	~insertion_ordered_map()
+	~insertion_ordered_map() noexcept
 	{
 		memory_ptr.reset();
 	}
 
 	insertion_ordered_map &operator=(insertion_ordered_map other)
 	{
-
+    exists_reference = false;
+    memory_ptr = std::shared_ptr(other.memory_ptr);
+    if (other.exists_reference) {
+      copy_on_write();
+    }
 	}
 
 	bool insert(K const &k, V const &v) noexcept
 	{
 		if (this->contains(k)) return false;
 		has_to_copy();
-		return memory_ptr->insert(k, v); //powinno zawsze true w tym miejscu
+		return memory_ptr->insert(k, v); // assert true
 	}
 
 	void erase(K const &k)
 	{
 		if (!this->contains(k)) throw lookup_error();
 		has_to_copy();
-      memory_ptr->erase(k);
+		memory_ptr->remove(k);
 	}
 
 	void merge(insertion_ordered_map &other)
 	{
-		has_to_copy(); // unless kopiuje siebie w siebie, wtedy nic się nie zmieni
+    if (memory_ptr == other.memory_ptr) return; //merge siebie ze sobą nic nie da
+		has_to_copy();
 		iterator it = other.begin();
 		iterator fin = other.end();
 		while (it != fin) {
@@ -240,27 +255,31 @@ public:
 		}
 	}
 
-	V &at(K const &k) //brakuje tej obsłúgi pamięci dzielonej
+	V &at(K const &k)
+	{
+    exists_reference = true;
+		return this->memory_ptr->at(k);
+	}
+
+	V const &at(K const &k) const
 	{
 		return this->memory_ptr->at(k);
 	}
 
-	V const &at(K const &k) const //tutaj nie potrzeba obsługi pamięci
+  template <typename = std::enable_if_t<is_default_constructible<V>::value>>
+	V &operator[](K const &k) //czy tutaj się liczy jak referencja? do sprawdzenia
 	{
-		return this->memory_ptr->at(k);
-	}
-
-	V &operator[](K const &k)
-	{
+    if (!this->contains(k))
+      this->insert(k, V());
 		return this->at(k);
 	}
 
-	size_t size() const
+	size_t size() const noexcept
 	{
 		return this->memory_ptr->size;
 	}
 
-	bool empty() const
+	bool empty() const noexcept
 	{
 		return this->size() == 0;
 	}
@@ -272,15 +291,17 @@ public:
 
 	bool contains(K const &k) const
 	{
-		this->memory_ptr->contains(k);
+		return this->memory_ptr->contains(k);
 	}
 
 
 private:
 
-	iterator create_iterator(node *n)
+	iterator create_iterator(node *n) const
 	{
-
+    iterator it;
+    it.n = n;
+    return n;
 	}
 
 public:
@@ -291,42 +312,38 @@ public:
 	private:
 		node *n;
 
+		friend class insertion_ordered_map;
 	public:
-		iterator &operator++()
+		void operator++() //bez noexcept bo nullptr
 		{
-			return create_iterator(this->n->next); //co jak next to end?
+			this->n = this->n->next; //co jak next to end?
 		}
 
-		bool operator==(iterator &other)
+		bool operator==(iterator &other) const noexcept
 		{
 			return other.n == this->n;
 		}
 
-		bool operator!=(iterator &other)
+		bool operator!=(iterator &other) const noexcept
 		{
 			return !(*this == other);
 		}
 
-		V operator*() {
+		const V &operator*() const {
 			return n->value;
 		}
-
-		friend class insertion_ordered_map;
 	};
 
-	//czy begin i end w środku czy na końcu?
-
-
-	iterator begin()
+	iterator begin() const noexcept
 	{
 		return create_iterator(this->memory_ptr->begin); //przerobić obie funkcje aby nie tworzyły za każdym razem tylko ref zwracały – pamiętać o copy on write
 	}
 
-	iterator end()
+	iterator end() const noexcept
 	{
 		return create_iterator(this->memory_ptr->end);
 	}
-	
+
 };
 
 
