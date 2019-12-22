@@ -70,7 +70,7 @@ private:
   {
     node *begin;
     node end;
-    std::unordered_map<K, node, Hash> _memory;
+    std::unordered_map<K, node, Hash> memory;
 
     container() noexcept
     {
@@ -83,26 +83,26 @@ private:
 
       node *it = other->begin;
       while (it != &other->end) {
-        this->insert(it->key, it->value.value());
+        insert(it->key, it->value.value());
         it = it->next;
       }
     }
 
     size_t size() const noexcept
     {
-      return _memory.size();
+      return memory.size();
     }
 
     bool contains(K const &k) const
     {
-        return _memory.count(k) != 0;
+        return memory.count(k) != 0;
     }
 
     void remove(K const &k)
     {
       try {
         if (k == begin->key) begin = begin->next;
-        if (_memory.erase(k) != 1) throw lookup_error();
+        if (memory.erase(k) != 1) throw lookup_error();
       }
       catch (...) {
         begin = begin->previous;
@@ -110,9 +110,9 @@ private:
       }
     }
 
-    bool insert(K const &k, V const &v)
+    std::pair<node *, bool> insert(K const &k, V const &v)
     {
-      auto it = _memory.try_emplace(k, k, v, &end);
+      auto it = memory.try_emplace(k, k, v, &end);
       if (!it.second) {
         if (k == begin->key) begin = begin->next;
         it.first->second.detach();
@@ -120,13 +120,13 @@ private:
       }
       begin = begin->previous;
 
-      return it.second;
+      return std::make_pair(&it.first->second,it.second);
     }
 
     V &at(K const &k)
     {
-      if (_memory.count(k) != 1) throw lookup_error();
-      return _memory[k].value.value();
+      if (memory.count(k) != 1) throw lookup_error();
+      return memory[k].value.value();
     }
   };
 
@@ -150,14 +150,14 @@ private:
 public:
   class iterator;
 
-  insertion_ordered_map() noexcept
+  insertion_ordered_map()
   {
     memory_ptr = std::make_shared<container>();
   }
 
   insertion_ordered_map(insertion_ordered_map const &other)
   {
-    //trzeba sprawdzić czy nie istnieją referencje na elementy container
+    // Trzeba sprawdzić czy nie istnieją referencje na elementy container.
     memory_ptr = other.memory_ptr;
     if (other.exists_reference) {
       copy_on_write();
@@ -170,26 +170,30 @@ public:
     memory_ptr = other.memory_ptr;
   }
 
-  ~insertion_ordered_map() noexcept
-  {
-    memory_ptr.reset();
-  }
-
   insertion_ordered_map &operator=(insertion_ordered_map other)
   {
-    exists_reference = false;
-    memory_ptr = other.memory_ptr;
-    if (other.exists_reference) {
-      copy_on_write();
-    }
+    if (memory_ptr.get() == other.memory_ptr.get()) return *this;
 
-    return *this;
+    std::shared_ptr<container> old_memory_ptr = memory_ptr;
+    try {
+      memory_ptr = other.memory_ptr;
+      if (other.exists_reference) {
+          copy_on_write();
+      }
+      exists_reference = false;
+
+      return *this;
+    }
+    catch(...) {
+      memory_ptr = old_memory_ptr;
+      throw;
+    }
   }
 
   bool insert(K const &k, V const &v)
   {
     has_to_copy();
-    return memory_ptr->insert(k, v);
+    return memory_ptr->insert(k, v).second;
   }
 
   void erase(K const &k)
@@ -200,56 +204,66 @@ public:
 
   void merge(insertion_ordered_map const &other)
   {
-    //merge siebie ze sobą nic nie da.
+    // Merge siebie ze sobą nic nie da.
     if (memory_ptr.get() == other.memory_ptr.get()) return;
-    has_to_copy();
-    iterator it = other.begin();
-    iterator fin = other.end();
-    while (it != fin) {
-      memory_ptr->insert(it->first, it->second);
-      ++it;
+
+    std::shared_ptr<container> old_memory_ptr = memory_ptr;
+    try {
+      has_to_copy();
+      iterator it = other.begin();
+      iterator fin = other.end();
+      while (it!=fin) {
+        memory_ptr->insert(it->first, it->second);
+        ++it;
+      }
+    }
+    catch (...) {
+      memory_ptr = old_memory_ptr;
+      throw;
     }
   }
 
   V &at(K const &k)
   {
-    exists_reference = true;
     has_to_copy();
-    return this->memory_ptr->at(k);
+    exists_reference = true;
+    return memory_ptr->at(k);
   }
 
   V const &at(K const &k) const
   {
-    return this->memory_ptr->at(k);
+    return memory_ptr->at(k);
   }
 
   template <typename = std::enable_if_t<std::is_default_constructible<V>::value>>
   V &operator[](K const &k)
   {
-    if (!this->contains(k))
-      this->insert(k, V());
-    return this->at(k); //ERROR
+    has_to_copy();
+    exists_reference = true;
+    if (memory_ptr->contains(k))
+      return memory_ptr->at(k);
+    return memory_ptr->insert(k, V()).first->value.value();
   }
 
   size_t size() const noexcept
   {
-    return this->memory_ptr->size();
+    return memory_ptr->size();
   }
 
   bool empty() const noexcept
   {
-    return this->size() == 0;
+    return size() == 0;
   }
 
   // Po prostu przestajemy patrzeć.
   void clear()
   {
-    this->memory_ptr = std::make_shared<container>();
+    memory_ptr = std::make_shared<container>();
   }
 
   bool contains(K const &k) const
   {
-    return this->memory_ptr->contains(k);
+    return memory_ptr->contains(k);
   }
 
 private:
@@ -278,9 +292,18 @@ public:
     iterator &operator++()
     {
       n = n->next;
-      if (n->next !=nullptr) {
-        stored_pair =
-                std::make_optional(std::make_pair(n->key, n->value.value()));
+      if (n == nullptr)
+        throw lookup_error();
+
+      try {
+        if (n->next != nullptr) {
+          stored_pair =
+                  std::make_optional(std::make_pair(n->key, n->value.value()));
+        }
+      }
+      catch (...) {
+        n = n->previous;
+        throw;
       }
 
       return *this;
@@ -288,7 +311,7 @@ public:
 
     bool operator==(iterator &other) const noexcept
     {
-      return other.n == this->n;
+      return other.n == n;
     }
 
     bool operator!=(iterator &other) const noexcept
@@ -297,21 +320,23 @@ public:
     }
 
     const std::pair<K,V> &operator*() const {
+      if (n->next == nullptr) throw lookup_error();
       return stored_pair.value();
     }
     const std::pair<K,V> *operator->() const {
+      if (n->next == nullptr) throw lookup_error();
       return &stored_pair.value();
     }
   };
 
   iterator begin() const noexcept
   {
-    return create_iterator(this->memory_ptr->begin);
+    return create_iterator(memory_ptr->begin);
   }
 
   iterator end() const noexcept
   {
-    return create_iterator(&this->memory_ptr->end);
+    return create_iterator(&memory_ptr->end);
   }
 
 };
