@@ -19,7 +19,7 @@ private:
   {
     node *next = nullptr;
     node *previous;
-    V value;
+    std::optional<V> value;
     K key;
 
     void attach(node *next) noexcept
@@ -50,12 +50,11 @@ private:
     node() noexcept
     {
       this->previous = this;
-      // FIXME: Nie ma V()!
     }
 
     node(const K &key, const V &value, node *next)
     {
-      this->value = value;
+      this->value = std::make_optional(value);
       this->key = key;
 
       attach(next);
@@ -84,7 +83,7 @@ private:
 
       node *it = other->begin;
       while (it != &other->end) {
-        this->insert(it->key, it->value);
+        this->insert(it->key, it->value.value());
         it = it->next;
       }
     }
@@ -127,7 +126,7 @@ private:
     V &at(K const &k)
     {
       if (_memory.count(k) != 1) throw lookup_error();
-      return _memory[k].value;
+      return _memory[k].value.value();
     }
   };
 
@@ -167,6 +166,7 @@ public:
 
   insertion_ordered_map(insertion_ordered_map &&other) noexcept
   {
+    exists_reference = other.exists_reference;
     memory_ptr = other.memory_ptr;
   }
 
@@ -224,11 +224,11 @@ public:
   }
 
   template <typename = std::enable_if_t<std::is_default_constructible<V>::value>>
-  V &operator[](K const &k) //czy tutaj się liczy jak referencja? do sprawdzenia
+  V &operator[](K const &k)
   {
     if (!this->contains(k))
       this->insert(k, V());
-    return this->at(k);
+    return this->at(k); //ERROR
   }
 
   size_t size() const noexcept
@@ -241,42 +241,47 @@ public:
     return this->size() == 0;
   }
 
-	void clear() //po prostu przestajemy patrzeć
-	{
-      this->memory_ptr = std::make_shared<container>();
-	}
+  // Po prostu przestajemy patrzeć.
+  void clear()
+  {
+    this->memory_ptr = std::make_shared<container>();
+  }
 
   bool contains(K const &k) const
   {
     return this->memory_ptr->contains(k);
   }
 
-
 private:
-
   iterator create_iterator(node *n) const
   {
     iterator it;
     it.n = n;
-    it.stored_pair = std::make_pair(n->key, n->value);
+    it.stored_pair = n->next == nullptr ?
+            std::optional<std::pair<K, V>>() :
+            std::make_optional(std::make_pair(n->key, n->value.value()));
     return it;
   }
 
 public:
-
   class iterator
   {
-  insertion_ordered_map &operator=(insertion_ordered_map other);
   private:
+    insertion_ordered_map &operator=(insertion_ordered_map other);
+
     node *n;
-    std::pair<K,V> stored_pair;
+    std::optional<std::pair<K,V>> stored_pair;
 
     friend class insertion_ordered_map;
+
   public:
-    iterator &operator++() //bez noexcept bo nullptr
+    iterator &operator++()
     {
-      n = n->next; //co jak next to end?
-      stored_pair = std::make_pair(n->key, n->value);
+      n = n->next;
+      if (n->next !=nullptr) {
+        stored_pair =
+                std::make_optional(std::make_pair(n->key, n->value.value()));
+      }
 
       return *this;
     }
@@ -292,16 +297,16 @@ public:
     }
 
     const std::pair<K,V> &operator*() const {
-      return stored_pair;
+      return stored_pair.value();
     }
     const std::pair<K,V> *operator->() const {
-      return &stored_pair;
+      return &stored_pair.value();
     }
   };
 
   iterator begin() const noexcept
   {
-    return create_iterator(this->memory_ptr->begin); //przerobić obie funkcje aby nie tworzyły za każdym razem tylko ref zwracały – pamiętać o copy on write
+    return create_iterator(this->memory_ptr->begin);
   }
 
   iterator end() const noexcept
