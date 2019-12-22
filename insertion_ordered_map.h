@@ -1,10 +1,8 @@
 #ifndef JNP_INSERTION_ORDERED_MAP
 #define JNP_INSERTION_ORDERED_MAP
 
-#include <iostream>
 #include <unordered_map>
 #include <memory>
-#include <cassert>
 
 class lookup_error : std::exception
 {
@@ -284,7 +282,7 @@ public:
     insertion_ordered_map &operator=(insertion_ordered_map other);
 
     node *n;
-    std::optional<std::pair<K,V>> stored_pair;
+    std::optional<std::pair<K, V>> stored_pair;
 
     friend class insertion_ordered_map;
 
@@ -319,11 +317,11 @@ public:
       return !(*this == other);
     }
 
-    const std::pair<K,V> &operator*() const {
+    const std::pair<K, V> &operator*() const {
       if (n->next == nullptr) throw lookup_error();
       return stored_pair.value();
     }
-    const std::pair<K,V> *operator->() const {
+    const std::pair<K, V> *operator->() const {
       if (n->next == nullptr) throw lookup_error();
       return &stored_pair.value();
     }

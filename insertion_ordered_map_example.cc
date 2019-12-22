@@ -1,6 +1,7 @@
 #include "insertion_ordered_map.h"
 #include <cassert>
 #include <vector>
+#include <iostream>
 
 //Odkomentować w miarę dodawania funkcjonalności
 
